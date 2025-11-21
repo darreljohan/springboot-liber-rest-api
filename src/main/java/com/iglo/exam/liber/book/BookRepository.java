@@ -16,13 +16,4 @@ public interface BookRepository extends JpaRepository<Book, Integer> {
 
     List<Book> findByAuthor_IdAndIsDeletedFalse(Integer authorId);
 
-    @Query("""
-            SELECT
-                b.id,
-                b.name,
-                COUNT(0) as countBooks
-            FROM Books b
-            GROUP BY b.id, b.name
-            """)
-    List<BookCount> findBookCount();
  }
