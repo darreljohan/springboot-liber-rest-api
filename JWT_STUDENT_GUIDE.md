@@ -92,29 +92,29 @@ We add:
 
 ### Step A: Add Maven Dependencies (pom.xml)
 ```xml
-<dependency>
-  <groupId>io.jsonwebtoken</groupId>
-  <artifactId>jjwt-api</artifactId>
-  <version>0.12.6</version>
-</dependency>
-<dependency>
-  <groupId>io.jsonwebtoken</groupId>
-  <artifactId>jjwt-impl</artifactId>
-  <version>0.12.6</version>
-  <scope>runtime</scope>
-</dependency>
-<dependency>
-  <groupId>io.jsonwebtoken</groupId>
-  <artifactId>jjwt-jackson</artifactId>
-  <version>0.12.6</version>
-  <scope>runtime</scope>
-</dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-api</artifactId>
+      <version>0.12.6</version>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-impl</artifactId>
+      <version>0.12.6</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-jackson</artifactId>
+      <version>0.12.6</version>
+      <scope>runtime</scope>
+    </dependency>
 ```
 Run: `mvn clean compile` to pull them.
 
 ### Step B: Add Properties (application.properties)
 ```properties
-jwt.secret-key=ChangeThisSecretKeyToAStrongRandomValueOfAtLeast32Chars123!
+jwt.secret-key=fcc87a3b29f0475974c4ec603b636dfb
 jwt.expiration=86400000  # 24h in milliseconds
 ```
 Use a real secret in production: `openssl rand -base64 48`.
@@ -365,3 +365,340 @@ Feel free to extend this with refresh tokens, logout, and role hierarchies once 
 
 Happy coding! 🚀
 
+---
+
+## 19. Quick Implementation Checklist
+
+Use this to track your progress:
+
+### Dependencies & Configuration
+- [ ] Add 3 JWT dependencies to `pom.xml`
+- [ ] Run `mvn clean compile` successfully
+- [ ] Add `jwt.secret-key` to `application.properties`
+- [ ] Add `jwt.expiration` to `application.properties`
+
+### New Files to Create
+- [ ] Create `src/main/java/com/iglo/exam/liber/auth/JwtService.java`
+- [ ] Create `src/main/java/com/iglo/exam/liber/auth/JwtAuthenticationFilter.java`
+- [ ] Create `src/main/java/com/iglo/exam/liber/auth/dto/AuthLoginRequest.java`
+- [ ] Create `src/main/java/com/iglo/exam/liber/auth/dto/AuthLoginResponse.java`
+
+### Files to Modify
+- [ ] Update `authController.java` - add login endpoint + inject dependencies
+- [ ] Update `AuthConfiguration.java` - inject filter, add AuthenticationManager bean, register filter
+
+### Testing
+- [ ] Fix seed user passwords (BCrypt or DelegatingPasswordEncoder)
+- [ ] Start application - no errors
+- [ ] POST to `/api/v1/auth/login` - get token back
+- [ ] GET to `/api/v1/authors` with token - get data
+- [ ] GET to `/api/v1/authors` without token - get 401
+- [ ] Try expired/invalid token - get 401
+
+### Verification Steps
+- [ ] Check logs for filter order (JWT filter should be listed)
+- [ ] Decode token at jwt.io - see username and roles
+- [ ] Check `exp` claim matches configured expiration
+- [ ] Test with different roles (USER vs ADMIN)
+
+---
+
+## 20. Copy-Paste Reference (All Files)
+
+For quick implementation, here's everything in one place:
+
+### 📄 pom.xml (add to `<dependencies>` section)
+```xml
+<!-- JWT Dependencies -->
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-api</artifactId>
+    <version>0.12.6</version>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-impl</artifactId>
+    <version>0.12.6</version>
+    <scope>runtime</scope>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-jackson</artifactId>
+    <version>0.12.6</version>
+    <scope>runtime</scope>
+</dependency>
+```
+
+### 📄 application.properties (add at the end)
+```properties
+# JWT Configuration
+jwt.secret-key=ChangeThisSecretKeyToAStrongRandomValueOfAtLeast32Chars123!
+jwt.expiration=86400000
+```
+
+### 📄 JwtService.java (NEW FILE - complete)
+```java
+package com.iglo.exam.liber.auth;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+import java.util.List;
+
+@Service
+public class JwtService {
+
+    @Value("${jwt.secret-key}")
+    private String secretKey;
+
+    @Value("${jwt.expiration}")
+    private long expirationMillis;
+
+    private SecretKey key;
+
+    @PostConstruct
+    void init() {
+        this.key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public String generateToken(UserDetails userDetails) {
+        Date now = new Date();
+        Date exp = new Date(now.getTime() + expirationMillis);
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+        
+        return Jwts.builder()
+                .subject(userDetails.getUsername())
+                .issuedAt(now)
+                .expiration(exp)
+                .claim("roles", roles)
+                .signWith(key, Jwts.SIG.HS256)
+                .compact();
+    }
+
+    public String extractUsername(String token) {
+        return parseClaims(token).getSubject();
+    }
+
+    public boolean isTokenValid(String token, UserDetails userDetails) {
+        try {
+            String username = extractUsername(token);
+            return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public Date extractExpiration(String token) {
+        return parseClaims(token).getExpiration();
+    }
+
+    public long getExpirationMillis() {
+        return expirationMillis;
+    }
+
+    private boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    private Claims parseClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+}
+```
+
+### 📄 JwtAuthenticationFilter.java (NEW FILE - complete)
+```java
+package com.iglo.exam.liber.auth;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private final JwtService jwtService;
+    private final UserDetailsService userDetailsService;
+
+    public JwtAuthenticationFilter(JwtService jwtService, 
+                                   UserDetailsService userDetailsService) {
+        this.jwtService = jwtService;
+        this.userDetailsService = userDetailsService;
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, 
+                                     HttpServletResponse response, 
+                                     FilterChain filterChain) 
+            throws ServletException, IOException {
+        
+        String authHeader = request.getHeader("Authorization");
+        
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            
+            try {
+                String username = jwtService.extractUsername(token);
+                
+                if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    
+                    if (jwtService.isTokenValid(token, userDetails)) {
+                        UsernamePasswordAuthenticationToken authToken = 
+                            new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities()
+                            );
+                        
+                        authToken.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request)
+                        );
+                        
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        
+        filterChain.doFilter(request, response);
+    }
+}
+```
+
+### 📄 AuthLoginRequest.java (NEW FILE - complete)
+```java
+package com.iglo.exam.liber.auth.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class AuthLoginRequest {
+    
+    @NotBlank(message = "Username is required")
+    private String username;
+    
+    @NotBlank(message = "Password is required")
+    private String password;
+}
+```
+
+### 📄 AuthLoginResponse.java (NEW FILE - complete)
+```java
+package com.iglo.exam.liber.auth.dto;
+
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.List;
+
+@Getter
+@Setter
+@Builder
+public class AuthLoginResponse {
+    private String username;
+    private String token;
+    private long expiresIn;
+    private List<String> roles;
+}
+```
+
+### 📄 authController.java (MODIFY - add these parts)
+```java
+// Add these imports at the top
+import com.iglo.exam.liber.auth.dto.AuthLoginRequest;
+import com.iglo.exam.liber.auth.dto.AuthLoginResponse;
+import jakarta.validation.Valid;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+
+// Add these fields (inject in constructor)
+private final AuthenticationManager authenticationManager;
+private final JwtService jwtService;
+private final UserDetailsService userDetailsService;
+
+// Add this method to the class
+@PostMapping("/login")
+public ResponseEntity<AuthLoginResponse> login(@Valid @RequestBody AuthLoginRequest request) {
+    authenticationManager.authenticate(
+        new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+    );
+    
+    UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
+    String token = jwtService.generateToken(userDetails);
+    
+    return ResponseEntity.ok(AuthLoginResponse.builder()
+        .username(userDetails.getUsername())
+        .token(token)
+        .expiresIn(jwtService.getExpirationMillis())
+        .roles(userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList())
+        .build());
+}
+```
+
+### 📄 AuthConfiguration.java (MODIFY - key changes)
+```java
+// Add these imports
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+// Add to constructor parameters
+private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+// Add this bean
+@Bean
+public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) 
+        throws Exception {
+    return configuration.getAuthenticationManager();
+}
+
+// In securityFilterChain method, update:
+.authorizeHttpRequests(request -> request
+    .requestMatchers("/auth/login").permitAll()  // ADD THIS LINE
+    // ... rest of your rules ...
+    .anyRequest().authenticated())  // CHANGE from permitAll()
+
+// Add this line before return http.build()
+.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+
+// REMOVE this line (if exists)
+// .httpBasic(Customizer.withDefaults())
+```
+
+---
+
+Now you have everything you need! Start from the checklist and work through each file. Good luck! 🎯
