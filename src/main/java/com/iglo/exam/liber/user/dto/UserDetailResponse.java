@@ -1,7 +1,7 @@
 package com.iglo.exam.liber.user.dto;
 
 import com.iglo.exam.liber.user.Gender;
-import com.iglo.exam.liber.user.Role;
+import com.iglo.exam.liber.role.RoleName;
 import lombok.Builder;
 import lombok.Data;
 
@@ -16,6 +16,5 @@ public class UserDetailResponse {
     private String lastName;
     private LocalDate birthDate;
     private Gender gender;
-    private Role role;
     private Boolean deactivated;
 }

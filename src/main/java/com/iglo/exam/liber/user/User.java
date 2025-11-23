@@ -1,6 +1,8 @@
 package com.iglo.exam.liber.user;
 
 import com.iglo.exam.liber.review.Review;
+import com.iglo.exam.liber.role.Role;
+import com.iglo.exam.liber.role.RoleName;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,6 +26,8 @@ public class User {
 
     @Column(unique = true)
     private String username;
+
+    @Column(unique = true, nullable = false)
     private String password;
     private String email;
     private LocalDate birthDate;
@@ -32,10 +36,12 @@ public class User {
     private Gender gender;
 
     @Enumerated(EnumType.STRING)
+    @ManyToOne(fetch = FetchType.EAGER)
     private Role role;
 
     private boolean deactivated = false;
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Set<Review> reviewSet = new HashSet<>();
+
 }

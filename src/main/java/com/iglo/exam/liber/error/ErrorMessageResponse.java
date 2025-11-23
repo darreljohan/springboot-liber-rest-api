@@ -9,9 +9,10 @@ import java.time.ZonedDateTime;
 
 @Data
 @Builder
-public class ErrorMessageResponse  <T> {
+public class ErrorMessageResponse<T> {
     private final HttpStatus status;
     private final String message;
+    @Builder.Default
     private final ZonedDateTime timestamp = ZonedDateTime.now(ZoneId.of("Z"));
     private final T errors;
 }

@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/auth")
 public class authController {
-    
+
     @GetMapping("{username}")
     public ResponseEntity<Authentication> getByUsername(@PathVariable String username, Authentication authentication){
         return ResponseEntity.ok(authentication);

@@ -1,7 +1,9 @@
 package com.iglo.exam.liber.user;
 
+import com.iglo.exam.liber.user.dto.AuthRegisterRequest;
 import com.iglo.exam.liber.user.dto.UserDetailResponse;
 import com.iglo.exam.liber.user.dto.UserResponse;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -36,5 +38,10 @@ public class UserController {
     @PatchMapping("{username}/deactivate")
     public ResponseEntity<UserDetailResponse> deactivateUser(@PathVariable String username) {
         return ResponseEntity.ok(userService.deactivateUser(username));
+    }
+
+    @PostMapping()
+    public ResponseEntity<UserDetailResponse> RegisterUser(@RequestBody @Valid AuthRegisterRequest authRegisterRequest) {
+        return ResponseEntity.ok(userService.registerUser(authRegisterRequest));
     }
 }

@@ -23,4 +23,6 @@ public interface UserRepository extends JpaRepository<User, Integer> {
                                                @Param("lastName")String lastName);
 
     Optional<User> findByUsernameAndDeactivatedFalse(String username);
+
+    Optional<User> findByUsername(String username);
 }

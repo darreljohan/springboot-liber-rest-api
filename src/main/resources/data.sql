@@ -1,17 +1,26 @@
+-- ROLES (must be inserted first due to foreign key relationship)
+IF NOT EXISTS (SELECT 1 FROM Roles WHERE id = 1)
+INSERT INTO Roles (id, roleName)
+VALUES (1, 'USER');
+
+IF NOT EXISTS (SELECT 1 FROM Roles WHERE id = 2)
+INSERT INTO Roles (id, roleName)
+VALUES (2, 'ADMIN');
+
 -- USERS
 SET IDENTITY_INSERT users ON;
 
 IF NOT EXISTS (SELECT 1 FROM users WHERE id = 1)
-INSERT INTO users (id, username, email, password, gender, role, deactivated, firstName, lastName)
-VALUES (1, 'alice', 'alice@example.com', '{noop}Password1!', 'F', 'USER', 0, 'Alice', 'Smith');
+INSERT INTO users (id, username, email, password, gender, role_id, deactivated, firstName, lastName)
+VALUES (1, 'alice', 'alice@example.com', '{noop}Password1!', 'F', 1, 0, 'Alice', 'Smith');
 
 IF NOT EXISTS (SELECT 1 FROM users WHERE id = 2)
-INSERT INTO users (id, username, email, password, gender, role, deactivated, firstName, lastName)
-VALUES (2, 'bob', 'bob@example.com', '{noop}Password2!', 'M', 'USER', 0, 'Bob', 'Johnson');
+INSERT INTO users (id, username, email, password, gender, role_id, deactivated, firstName, lastName)
+VALUES (2, 'bob', 'bob@example.com', '{noop}Password2!', 'M', 1, 0, 'Bob', 'Johnson');
 
 IF NOT EXISTS (SELECT 1 FROM users WHERE id = 3)
-INSERT INTO users (id, username, email, password, gender, role, deactivated, firstName, lastName)
-VALUES (3, 'charlie', 'charlie@example.com', '{noop}Password3!', 'M', 'ADMIN', 0, 'Charlie', 'Brown');
+INSERT INTO users (id, username, email, password, gender, role_id, deactivated, firstName, lastName)
+VALUES (3, 'charlie', 'charlie@example.com', '{noop}Password3!', 'M', 2, 0, 'Charlie', 'Brown');
 
 SET IDENTITY_INSERT users OFF;
 

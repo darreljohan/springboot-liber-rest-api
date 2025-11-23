@@ -7,6 +7,9 @@ import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -96,6 +99,18 @@ public class ErrorExceptionHandler {
                 .status(httpStatus)
                 .message("JSON Malformed: " + e.getCause().getMessage())
                 .errors(e.getMostSpecificCause().getLocalizedMessage())
+                .build();
+
+        return ResponseEntity.status(httpStatus).body(errorMessageResponse);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorMessageResponse<Object>> handleAuthenticationException(AuthenticationException e){
+        HttpStatus httpStatus = HttpStatus.UNAUTHORIZED;
+        ErrorMessageResponse<Object> errorMessageResponse = ErrorMessageResponse.builder()
+                .status(httpStatus)
+                .message("Authentication Failed")
+                .errors("Invalid username or password")
                 .build();
 
         return ResponseEntity.status(httpStatus).body(errorMessageResponse);

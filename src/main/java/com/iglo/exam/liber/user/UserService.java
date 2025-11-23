@@ -1,21 +1,29 @@
 package com.iglo.exam.liber.user;
 
 import com.iglo.exam.liber.error.exception.ResourceNotFound;
+import com.iglo.exam.liber.role.Role;
+import com.iglo.exam.liber.role.RoleRepository;
+import com.iglo.exam.liber.user.dto.AuthRegisterRequest;
 import com.iglo.exam.liber.user.dto.UserDetailResponse;
 import com.iglo.exam.liber.user.dto.UserResponse;
 import com.iglo.exam.liber.utils.NameUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class UserService {
     public final UserRepository userRepository;
+    public final RoleRepository roleRepository;
     public final UserDtoMapper userDtoMapper;
+    public final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, UserDtoMapper userDtoMapper) {
+    public UserService(UserRepository userRepository, RoleRepository roleRepository, UserDtoMapper userDtoMapper, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
         this.userDtoMapper = userDtoMapper;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public Page<UserResponse> findAllUsers(Pageable pageable, String fullname) {
@@ -44,5 +52,15 @@ public class UserService {
         user.setDeactivated(true);
         userRepository.save(user);
         return userDtoMapper.toUserDetailResponse(user);
+    }
+
+    public UserDetailResponse registerUser(AuthRegisterRequest authRegisterRequest) {
+        User user = userDtoMapper.toUser(authRegisterRequest);
+        user.setPassword(passwordEncoder.encode(authRegisterRequest.getPassword()));
+        Role role = roleRepository.findByRoleName(authRegisterRequest.getRole())
+                .orElseThrow(() -> new ResourceNotFound("Role not found: " + authRegisterRequest.getRole()));
+        user.setRole(role);
+        User userSaved = userRepository.save(user);
+        return userDtoMapper.toUserDetailResponse(userSaved);
     }
 }
