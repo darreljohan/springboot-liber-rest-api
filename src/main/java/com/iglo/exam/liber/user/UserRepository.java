@@ -24,5 +24,4 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     Optional<User> findByUsernameAndDeactivatedFalse(String username);
 
-    Optional<User> findByUsername(String username);
 }

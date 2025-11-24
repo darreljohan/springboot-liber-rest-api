@@ -2,6 +2,8 @@ package com.iglo.exam.liber.auth;
 
 import com.iglo.exam.liber.auth.handler.CustomAccessDeniedHandler;
 import com.iglo.exam.liber.auth.handler.CustomAuthenticationEntryPoint;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -14,20 +16,18 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
+@RequiredArgsConstructor
+//@EnableMethodSecurity
 public class AuthConfiguration {
 
+    //@Qualifier("authEntryPoint")
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
-
-    public AuthConfiguration(CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
-                             CustomAccessDeniedHandler customAccessDeniedHandler) {
-        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
-        this.customAccessDeniedHandler = customAccessDeniedHandler;
-    }
+    private final JwtRequestFilter jwtRequestFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
@@ -39,12 +39,13 @@ public class AuthConfiguration {
                         .requestMatchers(HttpMethod.DELETE, "/authors/*").hasRole("ADMIN")
                         .anyRequest().permitAll()
                 )
-                .httpBasic(Customizer.withDefaults())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(customAuthenticationEntryPoint)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .exceptionHandling(ex -> ex
                         .accessDeniedHandler(customAccessDeniedHandler)
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
                 )
+                .addFilterBefore(jwtRequestFilter,  UsernamePasswordAuthenticationFilter.class)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
         ;
         return http.build();

@@ -55,6 +55,7 @@ public class UserService {
     }
 
     public UserDetailResponse registerUser(AuthRegisterRequest authRegisterRequest) {
+        System.out.println("Registering user: " + authRegisterRequest.getUsername());
         User user = userDtoMapper.toUser(authRegisterRequest);
         user.setPassword(passwordEncoder.encode(authRegisterRequest.getPassword()));
         Role role = roleRepository.findByRoleName(authRegisterRequest.getRole())

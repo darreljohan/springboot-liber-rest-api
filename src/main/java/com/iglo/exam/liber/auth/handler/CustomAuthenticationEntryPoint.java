@@ -29,12 +29,11 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
             ErrorMessageResponse<Object> errorMessageResponse = ErrorMessageResponse.builder()
                     .status(HttpStatus.UNAUTHORIZED)
-                    .message("Authentication Failed")
-                    .errors("Invalid username or password: " + authException.getMessage())
+                    .message("Username or password is wrong")
+                    .errors(authException.getMessage())
                     .build();
 
             response.getWriter().write(objectMapper.writeValueAsString(errorMessageResponse));
         }
 
 }
-

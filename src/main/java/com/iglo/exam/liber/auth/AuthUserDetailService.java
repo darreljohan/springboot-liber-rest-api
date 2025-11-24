@@ -1,5 +1,6 @@
 package com.iglo.exam.liber.auth;
 
+import com.iglo.exam.liber.auth.dto.AuthJwtResponse;
 import com.iglo.exam.liber.user.User;
 import com.iglo.exam.liber.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +16,9 @@ public class AuthUserDetailService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) {
-        User user = userRepository.findByUsername(username)
+        User user = userRepository.findByUsernameAndDeactivatedFalse(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
         return AuthUserDetails.builder().user(user).build();
     }
+
 }
